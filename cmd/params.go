@@ -22,7 +22,7 @@ type NukeParameters struct {
 
 func (p *NukeParameters) Validate() error {
 	if strings.TrimSpace(p.ConfigPath) == "" {
-		return fmt.Errorf("You have to specify the --config flag.\n")
+		return fmt.Errorf("you have to specify the --config flag")
 	}
 
 	return nil

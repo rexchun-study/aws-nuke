@@ -34,7 +34,7 @@ func (n *Nuke) Run() error {
 	var err error
 
 	if n.Parameters.ForceSleep < 3 && n.Parameters.NoDryRun {
-		return fmt.Errorf("Value for --force-sleep cannot be less than 3 seconds if --no-dry-run is set. This is for your own protection.")
+		return fmt.Errorf("value for --force-sleep cannot be less than 3 seconds if --no-dry-run is set. This is for your own protection")
 	}
 	forceSleep := time.Duration(n.Parameters.ForceSleep) * time.Second
 
@@ -58,16 +58,21 @@ func (n *Nuke) Run() error {
 		}
 	}
 
+	// TODO: 처리해야할 리소스들에 대해서 스캔 진행
+	// 최종적으로 필터된 리소스, 삭제 가능 리소스 식별
+	// n.items(*Nuke.items Queue(type Queue []*Item -> ...)) 에 저장
 	err = n.Scan()
 	if err != nil {
 		return err
 	}
 
+	// 없으면
 	if n.items.Count(ItemStateNew) == 0 {
 		fmt.Println("No resource to delete.")
 		return nil
 	}
 
+	// 드라이런이 아니면
 	if !n.Parameters.NoDryRun {
 		fmt.Println("The above resources would be deleted with the supplied configuration. Provide --no-dry-run to actually destroy resources.")
 		return nil
@@ -80,6 +85,7 @@ func (n *Nuke) Run() error {
 		time.Sleep(forceSleep)
 	} else {
 		fmt.Printf("Do you want to continue? Enter account alias to continue.\n")
+		// account alias 치면 바로 실행
 		err = Prompt(n.Account.Alias())
 		if err != nil {
 			return err
@@ -89,7 +95,9 @@ func (n *Nuke) Run() error {
 	failCount := 0
 	waitingCount := 0
 
+	// 무한으로 즐기면서 상태 체크
 	for {
+		// 큐에 들어가 있는 상태 체크
 		n.HandleQueue()
 
 		if n.items.Count(ItemStatePending, ItemStateWaiting, ItemStateNew) == 0 && n.items.Count(ItemStateFailed) > 0 {
@@ -115,7 +123,7 @@ func (n *Nuke) Run() error {
 		}
 		if n.Parameters.MaxWaitRetries != 0 && n.items.Count(ItemStateWaiting, ItemStatePending) > 0 && n.items.Count(ItemStateNew) == 0 {
 			if waitingCount >= n.Parameters.MaxWaitRetries {
-				return fmt.Errorf("Max wait retries of %d exceeded.\n\n", n.Parameters.MaxWaitRetries)
+				return fmt.Errorf("max wait retries of %d exceeded", n.Parameters.MaxWaitRetries)
 			}
 			waitingCount = waitingCount + 1
 		} else {
@@ -137,6 +145,7 @@ func (n *Nuke) Run() error {
 func (n *Nuke) Scan() error {
 	accountConfig := n.Config.Accounts[n.Account.ID()]
 
+	// include, exclude 리소스 식별
 	resourceTypes := ResolveResourceTypes(
 		resources.GetListerNames(),
 		resources.GetCloudControlMapping(),
@@ -162,6 +171,8 @@ func (n *Nuke) Scan() error {
 	for _, regionName := range n.Config.Regions {
 		region := NewRegion(regionName, n.Account.ResourceTypeToServiceType, n.Account.NewSession)
 
+		// 세마포어를 통해 동시 최대 16개 API가 동작하여 스캔
+		// 고루틴을 이용함
 		items := Scan(region, resourceTypes)
 		for item := range items {
 			ffGetter, ok := item.Resource.(resources.FeatureFlagGetter)
@@ -170,6 +181,8 @@ func (n *Nuke) Scan() error {
 			}
 
 			queue = append(queue, item)
+			// TODO: filter는 인터페이스로 되어있으며,
+			// 필요한 구조체들이 인터페이스를 기준으로 구현함
 			err := n.Filter(item)
 			if err != nil {
 				return err

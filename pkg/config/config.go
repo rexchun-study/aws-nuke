@@ -68,6 +68,7 @@ type CustomRegion struct {
 
 type CustomEndpoints []*CustomRegion
 
+// yaml 파일 읽어와서 언마샬링 통해 yaml로 변환하여 메모리 로드
 func Load(path string) (*Nuke, error) {
 	var err error
 
@@ -82,6 +83,7 @@ func Load(path string) (*Nuke, error) {
 		return nil, err
 	}
 
+	// 예전에 쓰던 명칭 변경해주는 로직
 	if err := config.resolveDeprecations(); err != nil {
 		return nil, err
 	}
@@ -100,7 +102,7 @@ func (c *Nuke) ResolveBlocklist() []string {
 
 func (c *Nuke) HasBlocklist() bool {
 	var blocklist = c.ResolveBlocklist()
-	return blocklist != nil && len(blocklist) > 0
+	return len(blocklist) > 0
 }
 
 func (c *Nuke) InBlocklist(searchID string) bool {
@@ -115,32 +117,25 @@ func (c *Nuke) InBlocklist(searchID string) bool {
 
 func (c *Nuke) ValidateAccount(accountID string, aliases []string) error {
 	if !c.HasBlocklist() {
-		return fmt.Errorf("The config file contains an empty blocklist. " +
-			"For safety reasons you need to specify at least one account ID. " +
-			"This should be your production account.")
+		return fmt.Errorf("the config file contains an empty blocklist. For safety reasons you need to specify at least one account ID. This should be your production account")
 	}
 
 	if c.InBlocklist(accountID) {
-		return fmt.Errorf("You are trying to nuke the account with the ID %s, "+
-			"but it is blocklisted. Aborting.", accountID)
+		return fmt.Errorf("you are trying to nuke the account with the ID %s, but it is blocklisted. Aborting", accountID)
 	}
 
 	if len(aliases) == 0 {
-		return fmt.Errorf("The specified account doesn't have an alias. " +
-			"For safety reasons you need to specify an account alias. " +
-			"Your production account should contain the term 'prod'.")
+		return fmt.Errorf("the specified account doesn't have an alias. For safety reasons you need to specify an account alias. Your production account should contain the term 'prod'")
 	}
 
 	for _, alias := range aliases {
 		if strings.Contains(strings.ToLower(alias), "prod") {
-			return fmt.Errorf("You are trying to nuke an account with the alias '%s', "+
-				"but it has the substring 'prod' in it. Aborting.", alias)
+			return fmt.Errorf("you are trying to nuke an account with the alias '%s', but it has the substring 'prod' in it. Aborting", alias)
 		}
 	}
 
 	if _, ok := c.Accounts[accountID]; !ok {
-		return fmt.Errorf("Your account ID '%s' isn't listed in the config. "+
-			"Aborting.", accountID)
+		return fmt.Errorf("your account ID '%s' isn't listed in the config. Aborting", accountID)
 	}
 
 	return nil
@@ -159,7 +154,7 @@ func (c *Nuke) Filters(accountID string) (Filters, error) {
 	}
 
 	for _, presetName := range account.Presets {
-		notFound := fmt.Errorf("Could not find filter preset '%s'", presetName)
+		notFound := fmt.Errorf("could not find filter preset '%s'", presetName)
 		if c.Presets == nil {
 			return nil, notFound
 		}

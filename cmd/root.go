@@ -56,6 +56,7 @@ func NewRootCommand() *cobra.Command {
 
 		command.SilenceUsage = true
 
+		// 설정 파일 읽어서 로드
 		config, err := config.Load(params.ConfigPath)
 		if err != nil {
 			log.Errorf("Failed to parse config file %s", params.ConfigPath)
@@ -71,13 +72,14 @@ func NewRootCommand() *cobra.Command {
 				awsutil.DefaultAWSPartitionID = endpoints.AwsUsGovPartitionID
 			default:
 				if config.CustomEndpoints.GetRegion(defaultRegion) == nil {
-					err = fmt.Errorf("The custom region '%s' must be specified in the configuration 'endpoints'", defaultRegion)
+					err = fmt.Errorf("the custom region '%s' must be specified in the configuration 'endpoints'", defaultRegion)
 					log.Error(err.Error())
 					return err
 				}
 			}
 		}
 
+		// CREDENTIALS, account_id, aliases
 		account, err := awsutil.NewAccount(creds, config.CustomEndpoints)
 		if err != nil {
 			return err
