@@ -33,6 +33,7 @@ func NewNuke(params NukeParameters, account awsutil.Account) *Nuke {
 func (n *Nuke) Run() error {
 	var err error
 
+	// 실제 동작할거면 3초 이상 설정해라
 	if n.Parameters.ForceSleep < 3 && n.Parameters.NoDryRun {
 		return fmt.Errorf("value for --force-sleep cannot be less than 3 seconds if --no-dry-run is set. This is for your own protection")
 	}
@@ -40,6 +41,7 @@ func (n *Nuke) Run() error {
 
 	fmt.Printf("aws-nuke version %s - %s - %s\n\n", BuildVersion, BuildDate, BuildHash)
 
+	// 계정 유효성 점검
 	err = n.Config.ValidateAccount(n.Account.ID(), n.Account.Aliases())
 	if err != nil {
 		return err
@@ -174,6 +176,7 @@ func (n *Nuke) Scan() error {
 		// 세마포어를 통해 동시 최대 16개 API가 동작하여 스캔
 		// 고루틴을 이용함
 		items := Scan(region, resourceTypes)
+		// 100개 까지는 쭉쭉 받음 그 이후로는 채널 대기 상태로 들어감
 		for item := range items {
 			ffGetter, ok := item.Resource.(resources.FeatureFlagGetter)
 			if ok {

@@ -14,9 +14,10 @@ import (
 
 const ScannerParallelQueries = 16
 
+// 수신만 되는 채널 반환
 func Scan(region *Region, resourceTypes []string) <-chan *Item {
 	s := &scanner{
-		items:     make(chan *Item, 100), // 채널 큐 버퍼 100개
+		items:     make(chan *Item, 100), // 채널 버퍼 100개
 		semaphore: semaphore.NewWeighted(ScannerParallelQueries),
 	}
 	go s.run(region, resourceTypes)
@@ -37,9 +38,10 @@ func (s *scanner) run(region *Region, resourceTypes []string) {
 		go s.list(region, resourceType)
 	}
 
-	// 16개의 세마포어가 모두 종료될 때 까지 대기
+	// 리스팅 끝나면 세마포어 잠굼
 	s.semaphore.Acquire(ctx, ScannerParallelQueries)
 
+	// 채널 종료
 	close(s.items)
 }
 
